@@ -31,6 +31,14 @@ mixin _$HomeStore on _HomeStoreBase, Store {
     });
   }
 
+  final _$checkUserDataAsyncAction =
+      AsyncAction('_HomeStoreBase.checkUserData');
+
+  @override
+  Future checkUserData() {
+    return _$checkUserDataAsyncAction.run(() => super.checkUserData());
+  }
+
   final _$signOutAsyncAction = AsyncAction('_HomeStoreBase.signOut');
 
   @override

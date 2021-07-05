@@ -76,14 +76,14 @@ class _AuthPageState extends State<AuthPage>
                       ),
                       SizedBox(height: 10),
                       buildTextField(
-                        hint: 'Password',
+                        hint: 'Senha',
                         icon: Icons.lock_rounded,
                         ctrl: store.password,
                         obscure: true,
                       ),
                       SizedBox(height: 10),
                       buildButton(
-                        title: 'Sign In',
+                        title: 'Entrar',
                         onTap: () => store.signIn(context),
                       ),
                       Expanded(child: SizedBox()),
@@ -96,7 +96,7 @@ class _AuthPageState extends State<AuthPage>
                           }
                         },
                         child: Text(
-                          'Sign up a new account!',
+                          'Cadastrar uma nova conta!',
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.white,
@@ -124,7 +124,7 @@ class _AuthPageState extends State<AuthPage>
                     children: [
                       Expanded(flex: 3, child: SizedBox()),
                       buildTextField(
-                        hint: 'Name',
+                        hint: 'Nome',
                         icon: Icons.text_fields_rounded,
                         ctrl: store.name,
                       ),
@@ -136,14 +136,14 @@ class _AuthPageState extends State<AuthPage>
                       ),
                       SizedBox(height: 10),
                       buildTextField(
-                        hint: 'Password',
+                        hint: 'Senha',
                         icon: Icons.lock_rounded,
                         obscure: true,
                         ctrl: store.password,
                       ),
                       SizedBox(height: 10),
                       buildButton(
-                        title: 'Sign Up',
+                        title: 'Cadastrar',
                         onTap: () => store.createUser(context),
                       ),
                       Expanded(child: SizedBox()),
@@ -158,7 +158,7 @@ class _AuthPageState extends State<AuthPage>
                           store.clearInputs();
                         },
                         child: Text(
-                          'Already have an account?',
+                          'Já possui uma conta?',
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.white,

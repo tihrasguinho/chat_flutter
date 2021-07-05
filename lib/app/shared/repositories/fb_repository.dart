@@ -1,30 +1,129 @@
 import 'dart:convert';
 
+import 'package:chat/app/shared/models/message_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FirebaseRepository {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  final FirebaseAuth auth = FirebaseAuth.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final FirebaseMessaging messaging = FirebaseMessaging.instance;
 
   _FirebaseRepository();
+
+  Future<dynamic> sendMessageToFirestore(MessageModel message) async {
+    var map = message.toMap();
+
+    var key = base64UrlEncode(utf8.encode('${map['from']}:${map['to']}'));
+
+    var data = {
+      'from': map['from'],
+      'to': map['to'],
+      'type': map['type'],
+      'message': map['message'],
+      'time': Timestamp.now().millisecondsSinceEpoch,
+      'updated': Timestamp.now().millisecondsSinceEpoch,
+      'key': key,
+    };
+
+    await firestore.collection('chats').add(data).then((value) {
+      return MessageModel.fromMap({...data, 'id': value.id});
+    }).catchError((error) {
+      if (error is FirebaseException) {
+        throw ChatException(error.code);
+      } else if (error is ChatException) {
+        throw error;
+      } else {
+        throw Exception('GENERIC $error');
+      }
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getFriends() async {
+    var prefs = await SharedPreferences.getInstance();
+
+    var map = jsonDecode(prefs.getString('user')!);
+
+    var friends = map['friends'];
+
+    var list = <Map<String, dynamic>>[];
+
+    for (var i = 0; i < friends.length; i++) {
+      await firestore.collection('users').doc(friends[i]).get().then((snap) {
+        if (snap.exists) {
+          list.add({
+            'uid': snap.id,
+            'name': snap.data()!['name'],
+            'email': snap.data()!['email'],
+            'image': snap.data()!['image'],
+            'since': snap.data()!['since'],
+          });
+        }
+      }).catchError((error) {
+        if (error is FirebaseException) {
+          throw ChatException(error.code);
+        }
+      });
+    }
+
+    return list;
+  }
+
+  Future<void> getCurrentUser() async {
+    var prefs = await SharedPreferences.getInstance();
+
+    var map = jsonDecode(prefs.getString('user')!) as Map<String, dynamic>;
+
+    await firestore
+        .collection('users')
+        .doc(map['uid'])
+        .get()
+        .then((snapshot) async {
+      if (!snapshot.exists) throw ChatException('user-data-not-founded');
+
+      var user = {
+        'uid': snapshot.id,
+        'name': snapshot.data()!['name'],
+        'email': snapshot.data()!['email'],
+        'image': snapshot.data()!['image'],
+        'friends': snapshot.data()!['friends'],
+        'since': snapshot.data()!['since'],
+      };
+
+      print(mapEquals(map, user));
+
+      if (mapEquals(map, user)) {
+        throw ChatException('user-data-is-updated');
+      } else {
+        await prefs.setString('user', jsonEncode(user));
+      }
+    }).catchError((error) {
+      if (error is FirebaseException) {
+        throw ChatException(error.code);
+      } else if (error is ChatException) {
+        throw error;
+      } else {
+        throw Exception(error);
+      }
+    });
+  }
 
   Future<void> sendFriendRequest({required String email}) async {
     var prefs = await SharedPreferences.getInstance();
 
     var map = jsonDecode(prefs.getString('user')!);
 
-    await _firestore
+    await firestore
         .collection('users')
         .where('email', isEqualTo: email)
         .get()
         .then((value) async {
       if (value.docs.isEmpty) throw ChatException('user-not-found');
 
-      await _firestore
+      await firestore
           .collection('requests')
           .where('from', isEqualTo: map['uid'])
           .get()
@@ -41,7 +140,7 @@ class _FirebaseRepository {
         }
       });
 
-      await _firestore.collection('requests').add({
+      await firestore.collection('requests').add({
         'from': map['uid'],
         'to': value.docs.first.id,
         'state': 'await',
@@ -71,11 +170,11 @@ class _FirebaseRepository {
 
     var map = jsonDecode(prefs.getString('user')!);
 
-    await _firestore
+    await firestore
         .collection('users')
         .doc(map['uid'])
         .update({'token': ''}).then((value) async {
-      await _auth.signOut().then((value) {
+      await auth.signOut().then((value) {
         prefs.remove('user');
       }).catchError((error) {
         if (error is FirebaseException) {
@@ -101,16 +200,16 @@ class _FirebaseRepository {
   }) async {
     var prefs = await SharedPreferences.getInstance();
 
-    await _auth
+    await auth
         .signInWithEmailAndPassword(email: email, password: password)
         .then((value) async {
-      var doc = await _firestore.collection('users').doc(value.user!.uid).get();
+      var doc = await firestore.collection('users').doc(value.user!.uid).get();
 
       if (!doc.exists) throw ChatException('user-data-not-found');
 
-      var token = await _messaging.getToken();
+      var token = await messaging.getToken();
 
-      await _firestore.collection('users').doc(value.user!.uid).update({
+      await firestore.collection('users').doc(value.user!.uid).update({
         'token': token,
       }).catchError((error) {
         if (error is FirebaseException) {
@@ -149,10 +248,10 @@ class _FirebaseRepository {
 
     var prefs = await SharedPreferences.getInstance();
 
-    await _auth
+    await auth
         .createUserWithEmailAndPassword(email: email, password: password)
         .then((value) async {
-      var token = await _messaging.getToken();
+      var token = await messaging.getToken();
 
       var user = {
         'name': name,
@@ -164,7 +263,7 @@ class _FirebaseRepository {
         'updated_at': Timestamp.now().millisecondsSinceEpoch,
       };
 
-      await _firestore.collection('users').doc(value.user!.uid).set(user);
+      await firestore.collection('users').doc(value.user!.uid).set(user);
 
       user['uid'] = value.user!.uid;
 

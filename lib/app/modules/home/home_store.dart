@@ -9,6 +9,10 @@ part 'home_store.g.dart';
 class HomeStore = _HomeStoreBase with _$HomeStore;
 
 abstract class _HomeStoreBase with Store {
+  _HomeStoreBase() {
+    checkUserData();
+  }
+
   @observable
   bool _show = false;
 
@@ -17,6 +21,16 @@ abstract class _HomeStoreBase with Store {
 
   @action
   setShow() => _show = !_show;
+
+  @action
+  checkUserData() async => await firebase
+          .getCurrentUser()
+          .then((value) => print('updated!'))
+          .catchError((error) {
+        if (error is ChatException) {
+          print(error.message);
+        }
+      });
 
   @action
   signOut() async {

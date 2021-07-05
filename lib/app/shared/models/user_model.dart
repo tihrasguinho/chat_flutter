@@ -5,7 +5,7 @@ class UserModel {
   String name;
   String image;
   String email;
-  List<String> friends;
+  List<String>? friends;
   int since;
 
   UserModel({
@@ -13,7 +13,7 @@ class UserModel {
     required this.name,
     required this.image,
     required this.email,
-    required this.friends,
+    this.friends,
     required this.since,
   });
 
@@ -34,7 +34,9 @@ class UserModel {
       name: map['name'],
       image: map['image'],
       email: map['email'],
-      friends: List<String>.from(map['friends']),
+      friends: map['friends'] != null
+          ? (map['friends'] as List).map((e) => e.toString()).toList()
+          : [],
       since: map['since'],
     );
   }

@@ -17,7 +17,9 @@ class HomeModule extends Module {
     ChildRoute('/', child: (_, args) => HomePage()),
     ChildRoute(
       '/chat',
-      child: (_, args) => ChatPage(),
+      child: (_, args) => ChatPage(
+        friend: args.data['friend'],
+      ),
       transition: TransitionType.rightToLeftWithFade,
     ),
     ChildRoute(
