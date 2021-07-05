@@ -31,33 +31,18 @@ mixin _$AuthStore on _AuthStoreBase, Store {
     });
   }
 
-  final _$firstNameAtom = Atom(name: '_AuthStoreBase.firstName');
+  final _$nameAtom = Atom(name: '_AuthStoreBase.name');
 
   @override
-  TextEditingController get firstName {
-    _$firstNameAtom.reportRead();
-    return super.firstName;
+  TextEditingController get name {
+    _$nameAtom.reportRead();
+    return super.name;
   }
 
   @override
-  set firstName(TextEditingController value) {
-    _$firstNameAtom.reportWrite(value, super.firstName, () {
-      super.firstName = value;
-    });
-  }
-
-  final _$lastNameAtom = Atom(name: '_AuthStoreBase.lastName');
-
-  @override
-  TextEditingController get lastName {
-    _$lastNameAtom.reportRead();
-    return super.lastName;
-  }
-
-  @override
-  set lastName(TextEditingController value) {
-    _$lastNameAtom.reportWrite(value, super.lastName, () {
-      super.lastName = value;
+  set name(TextEditingController value) {
+    _$nameAtom.reportWrite(value, super.name, () {
+      super.name = value;
     });
   }
 
@@ -141,8 +126,7 @@ mixin _$AuthStore on _AuthStoreBase, Store {
   @override
   String toString() {
     return '''
-firstName: ${firstName},
-lastName: ${lastName},
+name: ${name},
 email: ${email},
 password: ${password},
 loading: ${loading}

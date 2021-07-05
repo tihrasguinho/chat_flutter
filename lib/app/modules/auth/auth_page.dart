@@ -124,15 +124,9 @@ class _AuthPageState extends State<AuthPage>
                     children: [
                       Expanded(flex: 3, child: SizedBox()),
                       buildTextField(
-                        hint: 'First Name',
+                        hint: 'Name',
                         icon: Icons.text_fields_rounded,
-                        ctrl: store.firstName,
-                      ),
-                      SizedBox(height: 10),
-                      buildTextField(
-                        hint: 'Last Name',
-                        icon: Icons.text_fields_rounded,
-                        ctrl: store.lastName,
+                        ctrl: store.name,
                       ),
                       SizedBox(height: 10),
                       buildTextField(
@@ -178,23 +172,21 @@ class _AuthPageState extends State<AuthPage>
             ),
           ),
           Observer(
-            builder: (_) {
-              return store.loading
-                  ? Positioned(
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                        child: Container(
-                          color: Colors.white60,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
+            builder: (_) => store.loading
+                ? Positioned.fill(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                      child: Container(
+                        color: Colors.white60,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
                           ),
                         ),
                       ),
-                    )
-                  : SizedBox();
-            },
+                    ),
+                  )
+                : Container(),
           ),
         ],
       ),

@@ -1,7 +1,4 @@
-import 'dart:convert';
-
-import 'package:chat/app/shared/models/user_model.dart';
-import 'package:chat/app/shared/repositories/api_repository.dart';
+import 'package:chat/app/shared/repositories/fb_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:mobx/mobx.dart';
@@ -12,16 +9,11 @@ part 'auth_store.g.dart';
 class AuthStore = _AuthStoreBase with _$AuthStore;
 
 abstract class _AuthStoreBase with Store {
-  final repository = ApiRepository();
-
   @observable
   bool _loading = true;
 
   @observable
-  var firstName = TextEditingController();
-
-  @observable
-  var lastName = TextEditingController();
+  var name = TextEditingController();
 
   @observable
   var email = TextEditingController();
@@ -48,105 +40,100 @@ abstract class _AuthStoreBase with Store {
 
   @action
   void clearInputs() {
-    firstName.clear();
-    lastName.clear();
+    name.clear();
     email.clear();
     password.clear();
   }
 
   @action
-  Future<dynamic> signIn(BuildContext context) async {
-    FocusScope.of(context).unfocus();
+  Future signIn(BuildContext context) async {
+    try {
+      FocusScope.of(context).unfocus();
 
-    var prefs = await SharedPreferences.getInstance();
+      setLoading();
 
-    var data = await repository.signIn(
-      email: email.text,
-      password: password.text,
-    );
-
-    if (data['statusCode'] == 200) {
-      var mUser = UserModel(
-        id: data['user']['id'],
-        firstName: data['user']['first_name'],
-        lastName: data['user']['last_name'],
-        image: data['user']['image'],
-        email: data['user']['email'],
-        accessToken: data['access_token'],
-        refreshToken: data['refresh_token'],
-        since: data['user']['since'],
-      );
-
-      await prefs.setString('user', json.encode(mUser.toMap()));
+      await firebase.loginUser(email: email.text, password: password.text);
 
       return Modular.to.pushReplacementNamed('/home');
-    } else {
-      print(data['message']);
+    } on ChatException catch (e) {
+      setLoading();
 
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            (data['message'] as String).toUpperCase(),
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.white,
-            ),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(milliseconds: 2500),
-        ),
-      );
+      print(e.message);
+
+      switch (e.message) {
+        case 'wrong-password':
+          return showError('Senha incorreta!', context);
+        case 'invalid-email':
+          return showError('Email inválido!', context);
+        case 'user-not-found':
+          return showError('Usuário não encontrado!', context);
+        case 'unknown':
+          return showError('Dados obrigatórios!', context);
+        default:
+          return showError(
+              'Erro incomum, tente novamente mais tarde!', context);
+      }
+    } on Exception catch (e) {
+      setLoading();
+
+      print(e);
+
+      return showError('Erro incomum, tente novamente mais tarde!', context);
     }
   }
 
   @action
-  Future<dynamic> createUser(BuildContext context) async {
-    FocusScope.of(context).unfocus();
+  Future createUser(BuildContext context) async {
+    try {
+      FocusScope.of(context).unfocus();
 
-    var prefs = await SharedPreferences.getInstance();
+      setLoading();
 
-    var data = await repository.signUp(
-      firstName: firstName.text,
-      lastName: lastName.text,
-      email: email.text,
-      password: password.text,
-    );
-
-    if (data['statusCode'] == 200) {
-      var mUser = UserModel(
-        id: data['user']['id'],
-        firstName: data['user']['first_name'],
-        lastName: data['user']['last_name'],
-        image: data['user']['image'],
-        email: data['user']['email'],
-        accessToken: data['access_token'],
-        refreshToken: data['refresh_token'],
-        since: data['user']['since'],
+      await firebase.createUser(
+        name: name.text,
+        email: email.text,
+        password: password.text,
       );
-
-      await prefs.setString('user', json.encode(mUser.toMap()));
 
       return Modular.to.pushReplacementNamed('/home');
-    } else {
-      print(data['message']);
+    } on ChatException catch (e) {
+      setLoading();
 
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            (data['message'] as String).toUpperCase(),
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.white,
-            ),
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(milliseconds: 2500),
-        ),
-      );
+      switch (e.message) {
+        case 'invalid-email':
+          return showError('Email inválido!', context);
+        case 'weak-password':
+          return showError('Sua senha precisa ser mais forte!', context);
+        case 'email-already-in-use':
+          return showError('Este email já está em uso!', context);
+        case 'unknown':
+          return showError('Problema com dados enviados!', context);
+        case 'name-required':
+          return showError('Seu nome stá em branco!', context);
+        default:
+          return showError(
+              'Erro incomum, tente novamente mais tarde!', context);
+      }
+    } on Exception catch (e) {
+      setLoading();
+      print(e);
+      return showError('Erro incomum, tente novamente mais tarde!', context);
     }
+  }
+
+  void showError(String message, context) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 }

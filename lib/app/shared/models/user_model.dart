@@ -1,48 +1,40 @@
 import 'dart:convert';
 
 class UserModel {
-  String id;
-  String firstName;
-  String lastName;
+  String uid;
+  String name;
   String image;
   String email;
-  String accessToken;
-  String refreshToken;
+  List<String> friends;
   int since;
 
   UserModel({
-    required this.id,
-    required this.firstName,
-    required this.lastName,
+    required this.uid,
+    required this.name,
     required this.image,
     required this.email,
-    required this.accessToken,
-    required this.refreshToken,
+    required this.friends,
     required this.since,
   });
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
-      'firstName': firstName,
-      'lastName': lastName,
+      'uid': uid,
+      'name': name,
       'image': image,
       'email': email,
-      'access_token': accessToken,
-      'refresh_token': refreshToken,
+      'friends': friends,
       'since': since,
     };
   }
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
-      id: map['id'],
-      firstName: map['firstName'],
-      lastName: map['lastName'],
+      uid: map['uid'],
+      name: map['name'],
       image: map['image'],
       email: map['email'],
-      accessToken: map['access_token'],
-      refreshToken: map['refresh_token'],
+      friends: List<String>.from(map['friends']),
       since: map['since'],
     );
   }
