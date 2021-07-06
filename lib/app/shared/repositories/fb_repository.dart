@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:chat/app/shared/models/message_model.dart';
+import 'package:chat/app/shared/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -42,25 +43,25 @@ class _FirebaseRepository {
     });
   }
 
-  Future<List<Map<String, dynamic>>> getFriends() async {
+  Future<List<UserModel>> getFriends() async {
     var prefs = await SharedPreferences.getInstance();
 
     var map = jsonDecode(prefs.getString('user')!);
 
     var friends = map['friends'];
 
-    var list = <Map<String, dynamic>>[];
+    var list = <UserModel>[];
 
     for (var i = 0; i < friends.length; i++) {
       await firestore.collection('users').doc(friends[i]).get().then((snap) {
         if (snap.exists) {
-          list.add({
+          list.add(UserModel.fromMap({
             'uid': snap.id,
             'name': snap.data()!['name'],
             'email': snap.data()!['email'],
             'image': snap.data()!['image'],
             'since': snap.data()!['since'],
-          });
+          }));
         }
       }).catchError((error) {
         if (error is FirebaseException) {

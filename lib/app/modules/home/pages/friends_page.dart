@@ -12,7 +12,7 @@ class FriendsPage extends StatefulWidget {
 }
 
 class _FriendsPageState extends State<FriendsPage> {
-  List<Map<String, dynamic>> friends = [];
+  List<UserModel> friends = [];
   bool isLoading = true;
 
   void loadFriendList() async {
@@ -64,9 +64,9 @@ class _FriendsPageState extends State<FriendsPage> {
                         child: InkWell(
                           onTap: () => {
                             Modular.to.popAndPushNamed(
-                              '/home/chat',
+                              '/home/chat/${friends[i].uid}',
                               arguments: {
-                                'friend': UserModel.fromMap(friends[i]),
+                                'friend': friends[i],
                               },
                             )
                           },
@@ -85,14 +85,14 @@ class _FriendsPageState extends State<FriendsPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      friends[i]['name'],
+                                      friends[i].name,
                                       style: TextStyle(
                                         fontSize: 16,
                                         color: Colors.black,
                                       ),
                                     ),
                                     Text(
-                                      friends[i]['email'],
+                                      friends[i].email,
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Colors.grey,

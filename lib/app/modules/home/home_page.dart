@@ -1,11 +1,13 @@
 import 'dart:ui';
 
 import 'package:chat/app/modules/home/home_store.dart';
-import 'package:chat/app/shared/models/user_model.dart';
+import 'package:chat/app/shared/models/message_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_modular/flutter_modular.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -20,6 +22,7 @@ class _HomePageState extends State<HomePage>
   @override
   void initState() {
     super.initState();
+    initializeDateFormatting();
     _controller = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 150),
@@ -34,6 +37,7 @@ class _HomePageState extends State<HomePage>
 
   @override
   Widget build(BuildContext context) {
+    var statusBarHeigth = MediaQuery.of(context).padding.top;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark
           .copyWith(statusBarColor: Colors.transparent),
@@ -41,13 +45,93 @@ class _HomePageState extends State<HomePage>
         body: Stack(
           children: [
             Positioned.fill(
-              child: ListView(
-                children: [],
+              child: Observer(
+                builder: (_) {
+                  return ListView.builder(
+                    padding: EdgeInsets.only(top: statusBarHeigth + 10),
+                    physics: BouncingScrollPhysics(),
+                    itemCount: store.preview.length,
+                    itemBuilder: (_, i) {
+                      var item = store.preview[i];
+                      var isMe = item.message.from == store.uid;
+
+                      return buildMessagePreview(isMe, item);
+                    },
+                  );
+                },
               ),
             ),
             buildOverlay(),
             buildFloatingActitionsButton(context),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildMessagePreview(bool isMe, MessagePreview item) {
+    var date = DateTime.fromMillisecondsSinceEpoch(item.message.time!);
+    var time = DateFormat.Hm('pt_BR').format(date);
+
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 5,
+      ),
+      child: Material(
+        color: Colors.white,
+        elevation: 5,
+        borderRadius: BorderRadius.circular(4),
+        child: InkWell(
+          onTap: () => Modular.to.pushNamed(
+            '/home/chat/${item.sender.uid}',
+            arguments: {
+              'friend': item.sender,
+            },
+          ),
+          splashColor: Colors.black12,
+          highlightColor: Colors.black12,
+          borderRadius: BorderRadius.circular(4),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isMe ? 'Você' : item.sender.name,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.black,
+                        ),
+                      ),
+                      Text(
+                        item.message.message,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  time,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.black45,
+                  ),
+                ),
+                SizedBox(width: 10),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -101,14 +185,7 @@ class _HomePageState extends State<HomePage>
                 onTap: () => {
                   Modular.to.pushNamed('/home/profile', arguments: {
                     'isMe': true,
-                    'user': UserModel(
-                      uid: 'uid',
-                      name: 'name',
-                      image: 'image',
-                      email: 'email',
-                      friends: [],
-                      since: 1,
-                    ),
+                    'user': store.user,
                   }),
                   store.setShow(),
                   _controller.reverse(),

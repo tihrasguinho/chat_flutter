@@ -16,9 +16,10 @@ class HomeModule extends Module {
   final List<ModularRoute> routes = [
     ChildRoute('/', child: (_, args) => HomePage()),
     ChildRoute(
-      '/chat',
+      '/chat/:id',
       child: (_, args) => ChatPage(
         friend: args.data['friend'],
+        uid: args.params['id'],
       ),
       transition: TransitionType.rightToLeftWithFade,
     ),

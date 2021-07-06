@@ -8,15 +8,19 @@ import 'package:flutter/material.dart';
 
 import 'package:chat/app/shared/models/user_model.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({
     Key? key,
     required this.friend,
+    required this.uid,
   }) : super(key: key);
 
   final UserModel friend;
+  final String uid;
 
   @override
   _ChatPageState createState() => _ChatPageState();
@@ -96,6 +100,7 @@ class _ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
     loadMessages();
+    initializeDateFormatting();
   }
 
   @override
@@ -119,6 +124,7 @@ class _ChatPageState extends State<ChatPage> {
           Expanded(
             child: ListView.builder(
               reverse: true,
+              physics: BouncingScrollPhysics(),
               itemCount: messages.length,
               itemBuilder: (_, i) {
                 var item = messages[i];
@@ -199,6 +205,9 @@ class _ChatPageState extends State<ChatPage> {
     required MessageModel item,
     required bool isMe,
   }) {
+    var date = DateTime.fromMillisecondsSinceEpoch(item.time!);
+    var time = DateFormat.Hm('pt_BR').format(date);
+
     return Row(
       mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
       children: [
@@ -244,7 +253,7 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ),
                   Text(
-                    '18:15',
+                    '$time',
                     style: TextStyle(
                       fontSize: 8,
                       color: isMe ? Colors.white54 : Colors.black45,

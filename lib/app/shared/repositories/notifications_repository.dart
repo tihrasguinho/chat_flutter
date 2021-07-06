@@ -87,6 +87,20 @@ Future onSelected(String payload) async {
           ),
         });
       }
+    case 'NEW_MESSAGE':
+      {
+        var map = jsonDecode(split[1]);
+
+        return Modular.to.pushNamed('/home/chat/${map['uid']}', arguments: {
+          'friend': UserModel(
+            uid: map['uid'],
+            name: map['name'],
+            image: map['image'],
+            email: map['email'],
+            since: map['since'],
+          ),
+        });
+      }
     default:
       {
         return Modular.to.pushNamed('/home');
@@ -125,6 +139,39 @@ Future<void> notificationBuiler(RemoteMessage message) async {
           body,
           payload,
         );
+      }
+    case 'NEW_MESSAGE':
+      {
+        final map = json.decode(message.data['sender']);
+        final msg = json.decode(message.data['message']);
+
+        final title = '${map['name']}';
+        final body = '${msg['message']}';
+        final payload = 'NEW_MESSAGE/${message.data['sender']}';
+
+        var path = Modular.to.path;
+
+        var split = path.trim().split('/');
+
+        if (split.length == 4) {
+          if (split[2] == 'chat' && split[3] == map['uid']) {
+            return flutterLocalNotificationsPlugin.cancel(message.hashCode);
+          } else {
+            return show(
+              message.hashCode,
+              title,
+              body,
+              payload,
+            );
+          }
+        } else {
+          return show(
+            message.hashCode,
+            title,
+            body,
+            payload,
+          );
+        }
       }
     default:
       {

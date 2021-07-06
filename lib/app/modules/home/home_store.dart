@@ -1,17 +1,43 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:chat/app/shared/models/message_model.dart';
+import 'package:chat/app/shared/models/message_preview.dart';
+import 'package:chat/app/shared/models/user_model.dart';
 import 'package:chat/app/shared/repositories/fb_repository.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:mobx/mobx.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 part 'home_store.g.dart';
 
 class HomeStore = _HomeStoreBase with _$HomeStore;
 
-abstract class _HomeStoreBase with Store {
+abstract class _HomeStoreBase extends Disposable with Store {
   _HomeStoreBase() {
-    checkUserData();
+    getCurrentUser();
+    loadLastMessages();
   }
+
+  late StreamSubscription<QuerySnapshot> subscription;
+
+  @observable
+  UserModel user = UserModel(
+    uid: '',
+    name: '',
+    image: '',
+    email: '',
+    since: 0,
+  );
+
+  @computed
+  String get uid => user.uid;
+
+  @observable
+  List<MessagePreview> preview = ObservableList<MessagePreview>();
 
   @observable
   bool _show = false;
@@ -23,14 +49,80 @@ abstract class _HomeStoreBase with Store {
   setShow() => _show = !_show;
 
   @action
-  checkUserData() async => await firebase
-          .getCurrentUser()
-          .then((value) => print('updated!'))
-          .catchError((error) {
-        if (error is ChatException) {
-          print(error.message);
-        }
+  loadLastMessages() async {
+    var prefs = await SharedPreferences.getInstance();
+
+    var map = jsonDecode(prefs.getString('user')!);
+
+    await firebase.getFriends().then((value) {
+      value.forEach((e) async {
+        var keyOne = base64UrlEncode(utf8.encode('${map['uid']}:${e.uid}'));
+
+        var keyTwo = base64UrlEncode(utf8.encode('${e.uid}:${map['uid']}'));
+
+        Query query = firebase.firestore.collection('chats');
+
+        query = query.where('key', whereIn: [keyOne, keyTwo]).orderBy('time');
+
+        subscription = query.snapshots().listen((snap) {
+          if (snap.size > 0) {
+            var data = snap.docs.last.data() as Map;
+
+            if (preview.any(
+                (e) => e.message.key == keyOne || e.message.key == keyTwo)) {
+              preview.removeWhere(
+                  (e) => e.message.key == keyOne || e.message.key == keyTwo);
+
+              preview.insert(
+                0,
+                MessagePreview(
+                  sender: e,
+                  message: MessageModel(
+                    from: data['from'],
+                    to: data['to'],
+                    message: data['message'],
+                    type: data['type'],
+                    key: data['key'],
+                    time: data['time'],
+                    updated: data['updated'],
+                    id: snap.docs.first.id,
+                  ),
+                ),
+              );
+            } else {
+              preview.insert(
+                0,
+                MessagePreview(
+                  sender: e,
+                  message: MessageModel(
+                    from: data['from'],
+                    to: data['to'],
+                    message: data['message'],
+                    type: data['type'],
+                    key: data['key'],
+                    time: data['time'],
+                    updated: data['updated'],
+                    id: snap.docs.first.id,
+                  ),
+                ),
+              );
+            }
+          }
+        });
       });
+    }).catchError((err) {
+      print(err);
+    });
+  }
+
+  @action
+  Future getCurrentUser() async {
+    var prefs = await SharedPreferences.getInstance();
+
+    var map = jsonDecode(prefs.getString('user')!);
+
+    user = UserModel.fromMap(map);
+  }
 
   @action
   signOut() async {
@@ -159,5 +251,10 @@ abstract class _HomeStoreBase with Store {
         ),
       );
     }
+  }
+
+  @override
+  void dispose() {
+    subscription.cancel();
   }
 }
