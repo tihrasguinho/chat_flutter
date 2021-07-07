@@ -15,12 +15,6 @@ mixin _$HomeStore on _HomeStoreBase, Store {
   String get uid => (_$uidComputed ??=
           Computed<String>(() => super.uid, name: '_HomeStoreBase.uid'))
       .value;
-  Computed<bool>? _$showComputed;
-
-  @override
-  bool get show => (_$showComputed ??=
-          Computed<bool>(() => super.show, name: '_HomeStoreBase.show'))
-      .value;
 
   final _$userAtom = Atom(name: '_HomeStoreBase.user');
 
@@ -34,6 +28,21 @@ mixin _$HomeStore on _HomeStoreBase, Store {
   set user(UserModel value) {
     _$userAtom.reportWrite(value, super.user, () {
       super.user = value;
+    });
+  }
+
+  final _$isDialOpenAtom = Atom(name: '_HomeStoreBase.isDialOpen');
+
+  @override
+  ValueNotifier<bool> get isDialOpen {
+    _$isDialOpenAtom.reportRead();
+    return super.isDialOpen;
+  }
+
+  @override
+  set isDialOpen(ValueNotifier<bool> value) {
+    _$isDialOpenAtom.reportWrite(value, super.isDialOpen, () {
+      super.isDialOpen = value;
     });
   }
 
@@ -52,27 +61,19 @@ mixin _$HomeStore on _HomeStoreBase, Store {
     });
   }
 
-  final _$_showAtom = Atom(name: '_HomeStoreBase._show');
+  final _$friendsAtom = Atom(name: '_HomeStoreBase.friends');
 
   @override
-  bool get _show {
-    _$_showAtom.reportRead();
-    return super._show;
+  List<UserModel> get friends {
+    _$friendsAtom.reportRead();
+    return super.friends;
   }
 
   @override
-  set _show(bool value) {
-    _$_showAtom.reportWrite(value, super._show, () {
-      super._show = value;
+  set friends(List<UserModel> value) {
+    _$friendsAtom.reportWrite(value, super.friends, () {
+      super.friends = value;
     });
-  }
-
-  final _$loadLastMessagesAsyncAction =
-      AsyncAction('_HomeStoreBase.loadLastMessages');
-
-  @override
-  Future loadLastMessages() {
-    return _$loadLastMessagesAsyncAction.run(() => super.loadLastMessages());
   }
 
   final _$getCurrentUserAsyncAction =
@@ -101,11 +102,11 @@ mixin _$HomeStore on _HomeStoreBase, Store {
       ActionController(name: '_HomeStoreBase');
 
   @override
-  dynamic setShow() {
+  void openDial() {
     final _$actionInfo = _$_HomeStoreBaseActionController.startAction(
-        name: '_HomeStoreBase.setShow');
+        name: '_HomeStoreBase.openDial');
     try {
-      return super.setShow();
+      return super.openDial();
     } finally {
       _$_HomeStoreBaseActionController.endAction(_$actionInfo);
     }
@@ -115,9 +116,10 @@ mixin _$HomeStore on _HomeStoreBase, Store {
   String toString() {
     return '''
 user: ${user},
+isDialOpen: ${isDialOpen},
 preview: ${preview},
-uid: ${uid},
-show: ${show}
+friends: ${friends},
+uid: ${uid}
     ''';
   }
 }

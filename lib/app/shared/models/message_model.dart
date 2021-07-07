@@ -1,22 +1,25 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MessageModel {
   String? id;
-  String from;
-  String to;
-  String message;
-  String type;
+  String? from;
+  String? to;
+  String? message;
+  String? type;
   String? key;
+  bool? seen;
   int? time;
   int? updated;
 
   MessageModel({
     this.id,
-    required this.from,
-    required this.to,
-    required this.message,
-    required this.type,
+    this.from,
+    this.to,
+    this.message,
+    this.type,
     this.key,
+    this.seen,
     this.time,
     this.updated,
   });
@@ -29,9 +32,15 @@ class MessageModel {
       'message': message,
       'type': type,
       'key': key,
+      'seen': seen,
       'time': time,
       'updated': updated,
     };
+  }
+
+  factory MessageModel.fromFirestore(DocumentSnapshot doc) {
+    var data = doc.data() as Map<String, dynamic>;
+    return MessageModel.fromMap({...data, 'id': doc.id});
   }
 
   factory MessageModel.fromMap(Map<String, dynamic> map) {
@@ -42,6 +51,7 @@ class MessageModel {
       message: map['message'],
       type: map['type'],
       key: map['key'],
+      seen: map['seen'],
       time: map['time'],
       updated: map['updated'],
     );

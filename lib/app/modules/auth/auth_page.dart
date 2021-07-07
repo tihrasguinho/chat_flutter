@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:chat/app/modules/auth/auth_store.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
@@ -36,159 +37,163 @@ class _AuthPageState extends State<AuthPage>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    return Scaffold(
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: AnimatedContainer(
-              duration: Duration(milliseconds: 350),
-              curve: Curves.easeInOut,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Theme.of(context).primaryColorDark,
-                    Theme.of(context).primaryColor,
-                  ],
+    return AnnotatedRegion(
+      value: SystemUiOverlayStyle.light
+          .copyWith(statusBarColor: Colors.transparent),
+      child: Scaffold(
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: AnimatedContainer(
+                duration: Duration(milliseconds: 350),
+                curve: Curves.easeInOut,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Theme.of(context).primaryColorDark,
+                      Theme.of(context).primaryColor,
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Tween<Offset>(
-                          begin: Offset.zero,
-                          end: Offset(-size.width, -size.height))
-                      .animate(CurvedAnimation(
-                          parent: _controller, curve: Curves.easeInOut))
-                      .value,
-                  child: Column(
-                    children: [
-                      Expanded(flex: 3, child: SizedBox()),
-                      buildTextField(
-                        hint: 'Email',
-                        icon: Icons.alternate_email_rounded,
-                        ctrl: store.email,
-                      ),
-                      SizedBox(height: 10),
-                      buildTextField(
-                        hint: 'Senha',
-                        icon: Icons.lock_rounded,
-                        ctrl: store.password,
-                        obscure: true,
-                      ),
-                      SizedBox(height: 10),
-                      buildButton(
-                        title: 'Entrar',
-                        onTap: () => store.signIn(context),
-                      ),
-                      Expanded(child: SizedBox()),
-                      TextButton(
-                        onPressed: () {
-                          if (_controller.isDismissed) {
-                            _controller.forward();
-                          } else {
-                            _controller.reverse();
-                          }
-                        },
-                        child: Text(
-                          'Cadastrar uma nova conta!',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Tween<Offset>(
+                            begin: Offset.zero,
+                            end: Offset(-size.width, -size.height))
+                        .animate(CurvedAnimation(
+                            parent: _controller, curve: Curves.easeInOut))
+                        .value,
+                    child: Column(
+                      children: [
+                        Expanded(flex: 3, child: SizedBox()),
+                        buildTextField(
+                          hint: 'Email',
+                          icon: Icons.alternate_email_rounded,
+                          ctrl: store.email,
+                        ),
+                        SizedBox(height: 10),
+                        buildTextField(
+                          hint: 'Senha',
+                          icon: Icons.lock_rounded,
+                          ctrl: store.password,
+                          obscure: true,
+                        ),
+                        SizedBox(height: 10),
+                        buildButton(
+                          title: 'Entrar',
+                          onTap: () => store.signIn(context),
+                        ),
+                        Expanded(child: SizedBox()),
+                        TextButton(
+                          onPressed: () {
+                            if (_controller.isDismissed) {
+                              _controller.forward();
+                            } else {
+                              _controller.reverse();
+                            }
+                          },
+                          child: Text(
+                            'Cadastrar uma nova conta!',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Tween<Offset>(
-                          begin: Offset(size.width, size.height),
-                          end: Offset.zero)
-                      .animate(CurvedAnimation(
-                          parent: _controller, curve: Curves.easeInOut))
-                      .value,
-                  child: Column(
-                    children: [
-                      Expanded(flex: 3, child: SizedBox()),
-                      buildTextField(
-                        hint: 'Nome',
-                        icon: Icons.text_fields_rounded,
-                        ctrl: store.name,
-                      ),
-                      SizedBox(height: 10),
-                      buildTextField(
-                        hint: 'Email',
-                        icon: Icons.alternate_email_rounded,
-                        ctrl: store.email,
-                      ),
-                      SizedBox(height: 10),
-                      buildTextField(
-                        hint: 'Senha',
-                        icon: Icons.lock_rounded,
-                        obscure: true,
-                        ctrl: store.password,
-                      ),
-                      SizedBox(height: 10),
-                      buildButton(
-                        title: 'Cadastrar',
-                        onTap: () => store.createUser(context),
-                      ),
-                      Expanded(child: SizedBox()),
-                      TextButton(
-                        onPressed: () {
-                          if (_controller.isDismissed) {
-                            _controller.forward();
-                          } else {
-                            _controller.reverse();
-                          }
-
-                          store.clearInputs();
-                        },
-                        child: Text(
-                          'Já possui uma conta?',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-          Observer(
-            builder: (_) => store.loading
-                ? Positioned.fill(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                      child: Container(
-                        color: Colors.white60,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                          ),
-                        ),
-                      ),
+                      ],
                     ),
-                  )
-                : Container(),
-          ),
-        ],
+                  );
+                },
+              ),
+            ),
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  return Transform.translate(
+                    offset: Tween<Offset>(
+                            begin: Offset(size.width, size.height),
+                            end: Offset.zero)
+                        .animate(CurvedAnimation(
+                            parent: _controller, curve: Curves.easeInOut))
+                        .value,
+                    child: Column(
+                      children: [
+                        Expanded(flex: 3, child: SizedBox()),
+                        buildTextField(
+                          hint: 'Nome',
+                          icon: Icons.text_fields_rounded,
+                          ctrl: store.name,
+                        ),
+                        SizedBox(height: 10),
+                        buildTextField(
+                          hint: 'Email',
+                          icon: Icons.alternate_email_rounded,
+                          ctrl: store.email,
+                        ),
+                        SizedBox(height: 10),
+                        buildTextField(
+                          hint: 'Senha',
+                          icon: Icons.lock_rounded,
+                          obscure: true,
+                          ctrl: store.password,
+                        ),
+                        SizedBox(height: 10),
+                        buildButton(
+                          title: 'Cadastrar',
+                          onTap: () => store.createUser(context),
+                        ),
+                        Expanded(child: SizedBox()),
+                        TextButton(
+                          onPressed: () {
+                            if (_controller.isDismissed) {
+                              _controller.forward();
+                            } else {
+                              _controller.reverse();
+                            }
+
+                            store.clearInputs();
+                          },
+                          child: Text(
+                            'Já possui uma conta?',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            Observer(
+              builder: (_) => store.loading
+                  ? Positioned.fill(
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                        child: Container(
+                          color: Colors.white60,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  : Container(),
+            ),
+          ],
+        ),
       ),
     );
   }

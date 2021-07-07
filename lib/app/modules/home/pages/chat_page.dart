@@ -1,16 +1,16 @@
 import 'dart:async';
-import 'dart:convert';
 
+import 'package:chat/app/modules/home/home_store.dart';
+import 'package:chat/app/modules/home/widgets/build_bubble.dart';
 import 'package:chat/app/shared/models/message_model.dart';
+import 'package:chat/app/shared/models/user_model.dart';
 import 'package:chat/app/shared/repositories/fb_repository.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-
-import 'package:chat/app/shared/models/user_model.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({
@@ -27,86 +27,254 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
-  var input = TextEditingController();
-
-  late StreamSubscription<QuerySnapshot> subscription;
-
-  late String currentUid;
+  final HomeStore store = Modular.get();
 
   List<MessageModel> messages = <MessageModel>[];
 
-  loadMessages() async {
-    var prefs = await SharedPreferences.getInstance();
+  late StreamSubscription<QuerySnapshot> subscription;
 
-    var map = jsonDecode(prefs.getString('user')!);
+  var input = TextEditingController();
 
-    currentUid = map['uid'];
+  _deleteOnFirestore(MessageModel message) async {
+    await firebase.firestore
+        .collection('chats')
+        .doc(message.id)
+        .delete()
+        .then((_) {
+      setState(() {
+        messages.removeWhere((e) => e.id == message.id);
+      });
+      Modular.to.pop();
+    }).catchError((err) {
+      print(err);
+    });
+  }
 
-    var keyOne =
-        base64UrlEncode(utf8.encode('${map['uid']}:${widget.friend.uid}'));
+  void deleteMessage(BuildContext context, MessageModel item) async {
+    await showDialog(
+      context: context,
+      builder: (_) {
+        return Center(
+          child: Stack(
+            children: [
+              Padding(
+                padding: EdgeInsets.only(
+                  top: 15,
+                  right: 15,
+                  left: 15,
+                ),
+                child: Material(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                  elevation: 5,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(height: 20),
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 20,
+                        ),
+                        child: Text(
+                          'Deseja apagar esta mensagem?',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      Material(
+                        color: Theme.of(context).primaryColor,
+                        elevation: 5,
+                        borderRadius: BorderRadius.circular(25),
+                        child: InkWell(
+                          splashColor: Colors.black12,
+                          highlightColor: Colors.black12,
+                          borderRadius: BorderRadius.circular(25),
+                          onTap: () => _deleteOnFirestore(item),
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                                vertical: 15, horizontal: 30),
+                            child: Text(
+                              'Sim!',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 30),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Material(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(45),
+                  child: SizedBox(
+                    height: 42,
+                    width: 42,
+                    child: Icon(
+                      Icons.priority_high_rounded,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
-    var keyTwo =
-        base64UrlEncode(utf8.encode('${widget.friend.uid}:${map['uid']}'));
+  void editMessage(BuildContext context, MessageModel item) async {
+    input.text = item.message!;
 
+    await showModalBottomSheet(
+      isScrollControlled: true,
+      context: context,
+      builder: (context) {
+        return Padding(
+          padding: MediaQuery.of(context).viewInsets,
+          child: SizedBox(
+            height: 75,
+            child: Row(
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                Flexible(
+                  child: TextField(
+                    controller: input,
+                    minLines: 1,
+                    maxLines: 5,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                    ),
+                    decoration: InputDecoration(
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+                Material(
+                  color: Theme.of(context).primaryColor,
+                  child: InkWell(
+                    onTap: () async {
+                      if (input.text.isNotEmpty) {
+                        await firebase.firestore
+                            .collection('chats')
+                            .doc(item.id)
+                            .update({
+                              'message': input.text,
+                              'updated': Timestamp.now().millisecondsSinceEpoch,
+                            })
+                            .then((_) => Modular.to.pop())
+                            .catchError((err) => print(err));
+                      }
+                    },
+                    splashColor: Colors.black12,
+                    highlightColor: Colors.black12,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Center(
+                        child: Text(
+                          'Editar',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    input.clear();
+  }
+
+  void getMessages() {
     Query query = firebase.firestore.collection('chats');
 
-    query = query.where('key', whereIn: [keyOne, keyTwo]);
+    query = query.where('key', isEqualTo: widget.friend.key);
 
-    subscription = query.orderBy('time').snapshots().listen((event) {
-      for (var item in event.docs) {
-        var data = item.data() as Map<String, dynamic>;
+    query = query.orderBy('time');
 
-        var message = {
-          'id': item.id,
-          ...data,
-        };
+    subscription = query.snapshots().listen((snapshot) {
+      var list =
+          snapshot.docs.map((e) => MessageModel.fromFirestore(e)).toList();
 
-        if (messages.every((e) => e.id != item.id)) {
-          setState(() {
-            messages.insert(0, MessageModel.fromMap(message));
-          });
+      list.sort((a, b) => b.time!.compareTo(a.time!));
+
+      if (messages.isEmpty) {
+        setState(() {
+          messages.addAll(list);
+        });
+      } else {
+        if (list.length == messages.length) {
+          for (var i = 0; i < list.length; i++) {
+            if (messages[i].message != list[i].message) {
+              setState(() {
+                messages.removeAt(i);
+                messages.insert(i, list[i]);
+              });
+            }
+          }
+        } else {
+          for (var i in list) {
+            if (messages.every((e) => e.id != i.id)) {
+              setState(() {
+                messages.insert(0, i);
+              });
+            }
+          }
         }
       }
     });
   }
 
   void sendMessage() async {
-    var prefs = await SharedPreferences.getInstance();
-
-    var map = jsonDecode(prefs.getString('user')!);
-
-    await firebase
-        .sendMessageToFirestore(MessageModel(
-      from: map['uid'],
-      to: widget.friend.uid,
-      message: input.text,
-      type: 'text',
-    ))
-        .then((value) {
-      input.clear();
-      if (value is MessageModel) {
-        if (messages.every((e) => e.id != value.id)) {
-          setState(() {
-            messages.insert(0, value);
-          });
-        }
-      }
-    }).catchError((err) {
-      print(err);
-    });
+    if (input.text.isNotEmpty) {
+      await firebase
+          .sendMessageToFirestore(
+            MessageModel(
+              from: store.uid,
+              to: widget.friend.uid!,
+              message: input.text,
+              type: 'text',
+              key: widget.friend.key,
+              seen: false,
+            ),
+          )
+          .then((value) => input.clear())
+          .catchError((err) => print(err));
+    }
   }
 
   @override
   void initState() {
     super.initState();
-    loadMessages();
     initializeDateFormatting();
+    getMessages();
   }
 
   @override
   void dispose() {
     input.dispose();
-    subscription.cancel();
+    subscription.isPaused ? print('isPaused') : subscription.cancel();
     super.dispose();
   }
 
@@ -117,7 +285,7 @@ class _ChatPageState extends State<ChatPage> {
         backwardsCompatibility: false,
         systemOverlayStyle: SystemUiOverlayStyle.light
             .copyWith(statusBarColor: Colors.transparent),
-        title: Text(widget.friend.name),
+        title: Text(widget.friend.name!),
       ),
       body: Column(
         children: [
@@ -128,9 +296,15 @@ class _ChatPageState extends State<ChatPage> {
               itemCount: messages.length,
               itemBuilder: (_, i) {
                 var item = messages[i];
-                var isMe = item.from == currentUid;
+                var isMe = store.uid == item.from;
 
-                return buildBubble(context: context, item: item, isMe: isMe);
+                return buildBubble(
+                  context: context,
+                  item: item,
+                  isMe: isMe,
+                  onLongPress: () => deleteMessage(context, item),
+                  onDoubleTap: () => editMessage(context, item),
+                );
               },
             ),
           ),
@@ -197,74 +371,6 @@ class _ChatPageState extends State<ChatPage> {
           )
         ],
       ),
-    );
-  }
-
-  Widget buildBubble({
-    required BuildContext context,
-    required MessageModel item,
-    required bool isMe,
-  }) {
-    var date = DateTime.fromMillisecondsSinceEpoch(item.time!);
-    var time = DateFormat.Hm('pt_BR').format(date);
-
-    return Row(
-      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-      children: [
-        Padding(
-          padding: EdgeInsets.only(
-            right: isMe ? 8 : 50,
-            left: isMe ? 50 : 8,
-            top: 0,
-            bottom: 8,
-          ),
-          child: Material(
-            color: isMe ? Theme.of(context).primaryColor : Colors.white,
-            elevation: 5,
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(8),
-              bottomRight: Radius.circular(8),
-              topLeft: Radius.circular(isMe ? 8 : 0),
-              topRight: Radius.circular(isMe ? 0 : 8),
-            ),
-            child: Padding(
-              padding: EdgeInsets.only(
-                right: isMe ? 8 : 10,
-                left: isMe ? 10 : 8,
-                bottom: 5,
-                top: 3,
-              ),
-              child: Column(
-                crossAxisAlignment:
-                    isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(
-                      top: 5,
-                      right: isMe ? 30 : 0,
-                      left: isMe ? 0 : 30,
-                    ),
-                    child: Text(
-                      item.message,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: isMe ? Colors.white : Colors.black,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '$time',
-                    style: TextStyle(
-                      fontSize: 8,
-                      color: isMe ? Colors.white54 : Colors.black45,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

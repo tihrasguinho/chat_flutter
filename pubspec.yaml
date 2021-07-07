@@ -5,6 +5,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 scripts:
   watch: flutter pub run build_runner watch --delete-conflicting-outputs
+  clean: flutter pub run build_runner clean
 
 version: 1.0.0+1
 
@@ -31,6 +32,7 @@ dependencies:
   firebase_auth: ^2.0.0
   intl: ^0.17.0
   google_fonts: ^2.1.0
+  flutter_speed_dial: ^3.0.5
 
 dev_dependencies:
   flutter_test:

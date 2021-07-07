@@ -22,7 +22,7 @@ class _ProfilePageState extends State<ProfilePage> {
             .copyWith(statusBarColor: Colors.transparent),
         backwardsCompatibility: false,
         centerTitle: true,
-        title: Text(widget.user.name),
+        title: Text(widget.user.name!),
       ),
     );
   }

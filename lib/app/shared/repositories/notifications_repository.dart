@@ -66,7 +66,6 @@ Future onSelected(String payload) async {
             name: map['name'],
             image: map['image'],
             email: map['email'],
-            friends: [],
             since: map['since'],
           ),
         });
@@ -82,7 +81,6 @@ Future onSelected(String payload) async {
             name: map['name'],
             image: map['image'],
             email: map['email'],
-            friends: [],
             since: map['since'],
           ),
         });

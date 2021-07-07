@@ -1,20 +1,22 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class UserModel {
-  String uid;
-  String name;
-  String image;
-  String email;
-  List<String>? friends;
-  int since;
+  String? uid;
+  String? name;
+  String? image;
+  String? email;
+  String? key;
+  int? since;
 
   UserModel({
-    required this.uid,
-    required this.name,
-    required this.image,
-    required this.email,
-    this.friends,
-    required this.since,
+    this.uid,
+    this.name,
+    this.image,
+    this.email,
+    this.key,
+    this.since,
   });
 
   Map<String, dynamic> toMap() {
@@ -23,9 +25,19 @@ class UserModel {
       'name': name,
       'image': image,
       'email': email,
-      'friends': friends,
       'since': since,
     };
+  }
+
+  factory UserModel.fromFirestore(DocumentSnapshot doc) {
+    var data = doc.data() as Map<String, dynamic>;
+    return UserModel(
+      uid: doc.id,
+      name: data['name'],
+      image: data['image'],
+      email: data['email'],
+      since: data['since'],
+    );
   }
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -34,9 +46,6 @@ class UserModel {
       name: map['name'],
       image: map['image'],
       email: map['email'],
-      friends: map['friends'] != null
-          ? (map['friends'] as List).map((e) => e.toString()).toList()
-          : [],
       since: map['since'],
     );
   }

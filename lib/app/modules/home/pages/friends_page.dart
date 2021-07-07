@@ -1,7 +1,7 @@
-import 'package:chat/app/shared/models/user_model.dart';
-import 'package:chat/app/shared/repositories/fb_repository.dart';
+import 'package:chat/app/modules/home/home_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
 class FriendsPage extends StatefulWidget {
@@ -12,25 +12,7 @@ class FriendsPage extends StatefulWidget {
 }
 
 class _FriendsPageState extends State<FriendsPage> {
-  List<UserModel> friends = [];
-  bool isLoading = true;
-
-  void loadFriendList() async {
-    await firebase.getFriends().then((value) {
-      setState(() {
-        friends.addAll(value);
-        isLoading = false;
-      });
-    }).catchError((error) {
-      print(error);
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    loadFriendList();
-  }
+  final HomeStore store = Modular.get();
 
   @override
   Widget build(BuildContext context) {
@@ -41,17 +23,17 @@ class _FriendsPageState extends State<FriendsPage> {
             .copyWith(statusBarColor: Colors.transparent),
         title: Text('Amigos'),
       ),
-      body: isLoading
-          ? Center(
-              child: CircularProgressIndicator(),
-            )
-          : friends.isEmpty
+      body: Observer(
+        builder: (_) {
+          return store.friends.isEmpty
               ? Center(
                   child: Text('nenhum amigo adicionado'),
                 )
               : ListView.builder(
-                  itemCount: friends.length,
+                  itemCount: store.friends.length,
                   itemBuilder: (_, i) {
+                    var item = store.friends[i];
+
                     return Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
@@ -64,9 +46,9 @@ class _FriendsPageState extends State<FriendsPage> {
                         child: InkWell(
                           onTap: () => {
                             Modular.to.popAndPushNamed(
-                              '/home/chat/${friends[i].uid}',
+                              '/home/chat/${item.uid}',
                               arguments: {
-                                'friend': friends[i],
+                                'friend': item,
                               },
                             )
                           },
@@ -85,14 +67,14 @@ class _FriendsPageState extends State<FriendsPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      friends[i].name,
+                                      item.name!,
                                       style: TextStyle(
                                         fontSize: 16,
                                         color: Colors.black,
                                       ),
                                     ),
                                     Text(
-                                      friends[i].email,
+                                      item.email!,
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Colors.grey,
@@ -107,7 +89,9 @@ class _FriendsPageState extends State<FriendsPage> {
                       ),
                     );
                   },
-                ),
+                );
+        },
+      ),
     );
   }
 }

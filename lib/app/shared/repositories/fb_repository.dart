@@ -4,6 +4,7 @@ import 'package:chat/app/shared/models/message_model.dart';
 import 'package:chat/app/shared/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,22 +13,22 @@ class _FirebaseRepository {
   final FirebaseAuth auth = FirebaseAuth.instance;
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
   final FirebaseMessaging messaging = FirebaseMessaging.instance;
+  final FirebaseDatabase database = FirebaseDatabase.instance;
 
   _FirebaseRepository();
 
   Future<dynamic> sendMessageToFirestore(MessageModel message) async {
     var map = message.toMap();
 
-    var key = base64UrlEncode(utf8.encode('${map['from']}:${map['to']}'));
-
     var data = {
       'from': map['from'],
       'to': map['to'],
       'type': map['type'],
       'message': map['message'],
+      'seen': map['seen'],
       'time': Timestamp.now().millisecondsSinceEpoch,
       'updated': Timestamp.now().millisecondsSinceEpoch,
-      'key': key,
+      'key': map['key'],
     };
 
     await firestore.collection('chats').add(data).then((value) {
@@ -48,27 +49,38 @@ class _FirebaseRepository {
 
     var map = jsonDecode(prefs.getString('user')!);
 
-    var friends = map['friends'];
-
     var list = <UserModel>[];
 
-    for (var i = 0; i < friends.length; i++) {
-      await firestore.collection('users').doc(friends[i]).get().then((snap) {
-        if (snap.exists) {
-          list.add(UserModel.fromMap({
-            'uid': snap.id,
-            'name': snap.data()!['name'],
-            'email': snap.data()!['email'],
-            'image': snap.data()!['image'],
-            'since': snap.data()!['since'],
-          }));
+    await firestore
+        .collection('users')
+        .doc(map['uid'])
+        .collection('friends')
+        .get()
+        .then((value) async {
+      if (value.docs.isNotEmpty) {
+        for (var i in value.docs) {
+          await firestore.collection('users').doc(i.id).get().then((doc) {
+            if (doc.exists) {
+              var friend = UserModel.fromFirestore(doc);
+              friend.key = i.data()['key'];
+              list.add(friend);
+            } else {
+              throw ChatException('user-not-found');
+            }
+          }).catchError((err) {
+            throw err;
+          });
         }
-      }).catchError((error) {
-        if (error is FirebaseException) {
-          throw ChatException(error.code);
-        }
-      });
-    }
+      }
+    }).catchError((err) {
+      if (err is FirebaseException) {
+        throw ChatException(err.code);
+      } else if (err is ChatException) {
+        throw err;
+      } else {
+        throw Exception(err);
+      }
+    });
 
     return list;
   }
@@ -225,7 +237,6 @@ class _FirebaseRepository {
         'name': doc.data()!['name'],
         'email': doc.data()!['email'],
         'image': doc.data()!['image'],
-        'friends': doc.data()!['friends'],
         'token': token,
         'since': doc.data()!['since'],
       };
@@ -234,6 +245,8 @@ class _FirebaseRepository {
     }).catchError((error) {
       if (error is FirebaseException) {
         throw ChatException(error.code);
+      } else if (error is ChatException) {
+        throw error;
       } else {
         throw Exception(error);
       }
@@ -258,7 +271,6 @@ class _FirebaseRepository {
         'name': name,
         'email': email,
         'image': '',
-        'friends': <String>[],
         'token': token,
         'since': Timestamp.now().millisecondsSinceEpoch,
         'updated_at': Timestamp.now().millisecondsSinceEpoch,
