@@ -2,7 +2,7 @@
 
 Um aplicativo de troca de mensagens simples (texto, imagem e áudio), tendo como backend o Firebase!
 
-<img src="https://i.imgur.com/oFO1w9D.jpg" width="35%" height="35%"> <img src="https://i.imgur.com/TSdJKgz.jpg" width="35%" height="35%">
+<img src="https://i.imgur.com/oFO1w9D.jpg" width="25%" height="25%"> <img src="https://i.imgur.com/TSdJKgz.jpg" width="25%" height="25%"> <img src="https://i.imgur.com/ogwpKF0.jpg" width="25%" height="25%"> 
 
 ##### Funcionalidades já existentes
 
