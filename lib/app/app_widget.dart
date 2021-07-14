@@ -7,7 +7,7 @@ class AppWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Chat',
+      title: 'Flutter Chat App',
       theme: ThemeData(
         textTheme: GoogleFonts.openSansTextTheme(),
         primarySwatch: Colors.blue,

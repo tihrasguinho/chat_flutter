@@ -6,16 +6,19 @@ import 'package:chat/app/shared/models/user_model.dart';
 class MessagePreview {
   UserModel sender;
   MessageModel message;
+  int unread;
 
   MessagePreview({
     required this.sender,
     required this.message,
+    required this.unread,
   });
 
   Map<String, dynamic> toMap() {
     return {
       'sender': sender.toMap(),
       'message': message.toMap(),
+      'unread': unread,
     };
   }
 
@@ -23,6 +26,7 @@ class MessagePreview {
     return MessagePreview(
       sender: UserModel.fromMap(map['sender']),
       message: MessageModel.fromMap(map['message']),
+      unread: map['unread'],
     );
   }
 

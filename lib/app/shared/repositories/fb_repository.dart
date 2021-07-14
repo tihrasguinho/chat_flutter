@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:chat/app/shared/models/message_model.dart';
 import 'package:chat/app/shared/models/user_model.dart';
@@ -6,73 +7,96 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FirebaseRepository {
   final FirebaseAuth auth = FirebaseAuth.instance;
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
-  final FirebaseMessaging messaging = FirebaseMessaging.instance;
   final FirebaseDatabase database = FirebaseDatabase.instance;
+  final FirebaseStorage storage = FirebaseStorage.instance;
 
-  _FirebaseRepository();
+  _FirebaseRepository() {
+    firestore.settings = Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+  }
 
-  Future<dynamic> sendMessageToFirestore(MessageModel message) async {
-    var map = message.toMap();
+  Future<void> sendMessageToDatabase(MessageModel message) async {
+    var from = 'messages/${message.from}/${message.to}';
+    var to = 'messages/${message.to}/${message.from}';
 
-    var data = {
-      'from': map['from'],
-      'to': map['to'],
-      'type': map['type'],
-      'message': map['message'],
-      'seen': map['seen'],
-      'time': Timestamp.now().millisecondsSinceEpoch,
-      'updated': Timestamp.now().millisecondsSinceEpoch,
-      'key': map['key'],
-    };
+    var push = database.reference().push().key;
 
-    await firestore.collection('chats').add(data).then((value) {
-      return MessageModel.fromMap({...data, 'id': value.id});
-    }).catchError((error) {
+    await Future.wait([
+      database.reference().child(from).child(push).set(message.toMap()),
+      database.reference().child(to).child(push).set(message.toMap()),
+    ]).then((_) {}).catchError((error) {
       if (error is FirebaseException) {
         throw ChatException(error.code);
-      } else if (error is ChatException) {
-        throw error;
       } else {
-        throw Exception('GENERIC $error');
+        throw Exception(error);
       }
     });
   }
 
-  Future<List<UserModel>> getFriends() async {
+  Future<String> uploadImageToChat(File file) async {
     var prefs = await SharedPreferences.getInstance();
 
     var map = jsonDecode(prefs.getString('user')!);
 
-    var list = <UserModel>[];
+    String? url;
 
-    await firestore
-        .collection('users')
-        .doc(map['uid'])
-        .collection('friends')
-        .get()
-        .then((value) async {
-      if (value.docs.isNotEmpty) {
-        for (var i in value.docs) {
-          await firestore.collection('users').doc(i.id).get().then((doc) {
-            if (doc.exists) {
-              var friend = UserModel.fromFirestore(doc);
-              friend.key = i.data()['key'];
-              list.add(friend);
-            } else {
-              throw ChatException('user-not-found');
-            }
-          }).catchError((err) {
-            throw err;
-          });
-        }
-      }
+    await storage
+        .ref()
+        .child('chats')
+        .child(map['uid'])
+        .child('${DateTime.now().toUtc().millisecondsSinceEpoch}-IMAGE.JPEG')
+        .putFile(file)
+        .then((task) async {
+      url = await task.ref.getDownloadURL();
     }).catchError((err) {
+      if (err is FirebaseException) {
+        throw ChatException(err.code);
+      } else {
+        throw Exception(err);
+      }
+    });
+
+    return url!;
+  }
+
+  Future<String> changeProfilePicture({required File file}) async {
+    var prefs = await SharedPreferences.getInstance();
+
+    var map = jsonDecode(prefs.getString('user')!);
+
+    var url = '';
+
+    await storage
+        .ref()
+        .child('users')
+        .child(map['uid'])
+        .child('profile-picture.jpeg')
+        .putFile(file)
+        .then((task) async {
+      url = await task.ref.getDownloadURL();
+
+      await database.reference().child('users').child(map['uid']).update({
+        'image': url,
+        'updated': DateTime.now().toUtc().millisecondsSinceEpoch,
+      }).then((_) {
+        print('picture updated!');
+      }).catchError((err) {
+        if (err is FirebaseException) {
+          throw ChatException(err.code);
+        } else {
+          throw Exception(err);
+        }
+      });
+    }).catchError((err) {
+      print(err);
       if (err is FirebaseException) {
         throw ChatException(err.code);
       } else if (err is ChatException) {
@@ -82,37 +106,22 @@ class _FirebaseRepository {
       }
     });
 
-    return list;
+    return url;
   }
 
   Future<void> getCurrentUser() async {
     var prefs = await SharedPreferences.getInstance();
 
-    var map = jsonDecode(prefs.getString('user')!) as Map<String, dynamic>;
+    var map = jsonDecode(prefs.getString('user')!);
 
-    await firestore
-        .collection('users')
-        .doc(map['uid'])
+    await database
+        .reference()
+        .child('users/${map['uid']}')
         .get()
         .then((snapshot) async {
-      if (!snapshot.exists) throw ChatException('user-data-not-founded');
+      var user = UserModel.fromDatabase(snapshot!);
 
-      var user = {
-        'uid': snapshot.id,
-        'name': snapshot.data()!['name'],
-        'email': snapshot.data()!['email'],
-        'image': snapshot.data()!['image'],
-        'friends': snapshot.data()!['friends'],
-        'since': snapshot.data()!['since'],
-      };
-
-      print(mapEquals(map, user));
-
-      if (mapEquals(map, user)) {
-        throw ChatException('user-data-is-updated');
-      } else {
-        await prefs.setString('user', jsonEncode(user));
-      }
+      await prefs.setString('user', user.toJson());
     }).catchError((error) {
       if (error is FirebaseException) {
         throw ChatException(error.code);
@@ -127,55 +136,67 @@ class _FirebaseRepository {
   Future<void> sendFriendRequest({required String email}) async {
     var prefs = await SharedPreferences.getInstance();
 
-    var map = jsonDecode(prefs.getString('user')!);
+    var user = UserModel.fromJson(prefs.getString('user')!);
 
-    await firestore
-        .collection('users')
-        .where('email', isEqualTo: email)
-        .get()
-        .then((value) async {
-      if (value.docs.isEmpty) throw ChatException('user-not-found');
+    try {
+      var users = await database
+          .reference()
+          .child('users')
+          .orderByChild('email')
+          .equalTo(email)
+          .once();
 
-      await firestore
-          .collection('requests')
-          .where('from', isEqualTo: map['uid'])
-          .get()
-          .then((check) {
-        if (check.docs.any((e) => e.data()['to'] == value.docs.first.id))
+      if (users.value != null) {
+        List<Map> list = <Map>[];
+
+        (users.value as Map).forEach((key, value) {
+          list.add({...value, 'uid': key});
+        });
+
+        if (user.friends!.contains(list.first['uid'])) {
+          throw ChatException('already-friends');
+        }
+
+        if (user.uid == list.first['uid']) {
+          throw ChatException('cant-add-yourself');
+        }
+
+        // check if request exists
+
+        var requests = await database
+            .reference()
+            .child('requests')
+            .child(list.first['uid'])
+            .orderByChild('from')
+            .equalTo(user.uid)
+            .once();
+
+        if (requests.value != null)
           throw ChatException('request-already-exists');
-      }).catchError((error) {
-        print(error);
 
-        if (error is FirebaseException) {
-          throw ChatException(error.code);
-        } else if (error is ChatException) {
-          throw error;
-        }
-      });
+        // writing a new request
 
-      await firestore.collection('requests').add({
-        'from': map['uid'],
-        'to': value.docs.first.id,
-        'state': 'await',
-        'time': Timestamp.now().millisecondsSinceEpoch,
-      }).catchError((e) {
-        print(e);
+        await database
+            .reference()
+            .child('requests/${list.first['uid']}')
+            .push()
+            .set({
+          'from': user.uid,
+          'state': 'awaiting',
+          'time': DateTime.now().toUtc().millisecondsSinceEpoch,
+        });
 
-        if (e is FirebaseException) {
-          throw ChatException(e.code);
-        } else if (e is ChatException) {
-          throw e;
-        }
-      });
-    }).catchError((error) {
-      print(error);
-
-      if (error is FirebaseException) {
-        throw ChatException(error.code);
-      } else if (error is ChatException) {
-        throw error;
+        print('request sended!');
+      } else {
+        throw ChatException('user-not-found');
       }
-    });
+    } on FirebaseException catch (error) {
+      throw ChatException(error.code);
+    } on ChatException catch (error) {
+      throw error;
+    } on Exception catch (error) {
+      throw ChatException(error.toString());
+    }
   }
 
   Future<void> signOut() async {
@@ -183,12 +204,12 @@ class _FirebaseRepository {
 
     var map = jsonDecode(prefs.getString('user')!);
 
-    await firestore
-        .collection('users')
-        .doc(map['uid'])
-        .update({'token': ''}).then((value) async {
-      await auth.signOut().then((value) {
-        prefs.remove('user');
+    await database.reference().child('users/${map['uid']}').update({
+      'token': '',
+      'updated': DateTime.now().toUtc().millisecondsSinceEpoch,
+    }).then((_) async {
+      await auth.signOut().then((value) async {
+        await prefs.remove('user');
       }).catchError((error) {
         if (error is FirebaseException) {
           throw ChatException(error.code);
@@ -216,32 +237,34 @@ class _FirebaseRepository {
     await auth
         .signInWithEmailAndPassword(email: email, password: password)
         .then((value) async {
-      var doc = await firestore.collection('users').doc(value.user!.uid).get();
+      await database
+          .reference()
+          .child('users/${value.user!.uid}')
+          .once()
+          .then((snapshot) async {
+        var user = UserModel.fromDatabase(snapshot);
 
-      if (!doc.exists) throw ChatException('user-data-not-found');
+        await database.reference().child('users/${value.user!.uid}').update({
+          'token': await FirebaseMessaging.instance.getToken(),
+          'updated': DateTime.now().toUtc().millisecondsSinceEpoch,
+        }).catchError((error) {
+          if (error is FirebaseException) {
+            throw ChatException(error.code);
+          } else {
+            throw Exception(error);
+          }
+        });
 
-      var token = await messaging.getToken();
-
-      await firestore.collection('users').doc(value.user!.uid).update({
-        'token': token,
+        await prefs.setString('user', user.toJson());
       }).catchError((error) {
         if (error is FirebaseException) {
           throw ChatException(error.code);
+        } else if (error is ChatException) {
+          throw error;
         } else {
           throw Exception(error);
         }
       });
-
-      var user = {
-        'uid': value.user!.uid,
-        'name': doc.data()!['name'],
-        'email': doc.data()!['email'],
-        'image': doc.data()!['image'],
-        'token': token,
-        'since': doc.data()!['since'],
-      };
-
-      await prefs.setString('user', jsonEncode(user));
     }).catchError((error) {
       if (error is FirebaseException) {
         throw ChatException(error.code);
@@ -265,24 +288,41 @@ class _FirebaseRepository {
     await auth
         .createUserWithEmailAndPassword(email: email, password: password)
         .then((value) async {
-      var token = await messaging.getToken();
+      var token = await FirebaseMessaging.instance.getToken();
+
+      var normalizer = name.replaceAll(' ', '+');
+
+      var url =
+          'https://ui-avatars.com/api/?name=$normalizer&size=256&color=000000&background=FFF';
 
       var user = {
         'name': name,
         'email': email,
-        'image': '',
+        'image': url,
         'token': token,
-        'since': Timestamp.now().millisecondsSinceEpoch,
-        'updated_at': Timestamp.now().millisecondsSinceEpoch,
+        'since': DateTime.now().toUtc().millisecondsSinceEpoch,
+        'updated': DateTime.now().toUtc().millisecondsSinceEpoch,
       };
 
-      await firestore.collection('users').doc(value.user!.uid).set(user);
+      await database
+          .reference()
+          .child('users/${value.user!.uid}')
+          .set(user)
+          .then((_) async {
+        user['uid'] = value.user!.uid;
 
-      user['uid'] = value.user!.uid;
+        user.remove('updated_at');
 
-      user.remove('updated_at');
+        user.remove('token');
 
-      await prefs.setString('user', jsonEncode(user));
+        await prefs.setString('user', jsonEncode(user));
+      }).catchError((error) {
+        if (error is FirebaseException) {
+          throw ChatException(error.code);
+        } else {
+          throw Exception(error);
+        }
+      });
     }).catchError((error) {
       if (error is FirebaseException) {
         throw ChatException(error.code);

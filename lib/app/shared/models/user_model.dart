@@ -1,13 +1,13 @@
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class UserModel {
   String? uid;
   String? name;
   String? image;
   String? email;
-  String? key;
+  List<String>? friends;
   int? since;
 
   UserModel({
@@ -15,7 +15,7 @@ class UserModel {
     this.name,
     this.image,
     this.email,
-    this.key,
+    this.friends,
     this.since,
   });
 
@@ -25,18 +25,25 @@ class UserModel {
       'name': name,
       'image': image,
       'email': email,
+      'friends': friends,
       'since': since,
     };
   }
 
-  factory UserModel.fromFirestore(DocumentSnapshot doc) {
-    var data = doc.data() as Map<String, dynamic>;
+  factory UserModel.fromDatabase(DataSnapshot data) {
+    var list = <String>[];
+
+    if (data.value['friends'] != null) {
+      (data.value['friends'] as Map).forEach((key, value) => list.add(key));
+    }
+
     return UserModel(
-      uid: doc.id,
-      name: data['name'],
-      image: data['image'],
-      email: data['email'],
-      since: data['since'],
+      uid: data.key,
+      name: data.value['name'],
+      email: data.value['email'],
+      image: data.value['image'],
+      friends: list,
+      since: data.value['since'],
     );
   }
 
@@ -46,6 +53,7 @@ class UserModel {
       name: map['name'],
       image: map['image'],
       email: map['email'],
+      friends: map['friends'] != null ? List<String>.from(map['friends']) : [],
       since: map['since'],
     );
   }

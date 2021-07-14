@@ -1,5 +1,6 @@
 import 'package:chat/app/modules/home/home_store.dart';
 import 'package:chat/app/modules/home/widgets/build_message_preview.dart';
+import 'package:chat/app/modules/home/widgets/popup_addfriend.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -12,10 +13,7 @@ class HomePage extends StatefulWidget {
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
-  final HomeStore store = Modular.get();
-
+class _HomePageState extends ModularState<HomePage, HomeStore> {
   @override
   void initState() {
     super.initState();
@@ -24,98 +22,140 @@ class _HomePageState extends State<HomePage>
 
   @override
   Widget build(BuildContext context) {
-    var statusBarHeigth = MediaQuery.of(context).padding.top;
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark
-          .copyWith(statusBarColor: Colors.transparent),
-      child: Observer(
-        builder: (_) {
-          return WillPopScope(
-            onWillPop: () async {
-              if (store.isDialOpen.value) {
-                store.openDial();
-                return false;
-              } else {
-                return true;
-              }
-            },
-            child: Scaffold(
-              body: ListView.builder(
-                padding: EdgeInsets.only(top: statusBarHeigth + 20),
-                itemCount: store.preview.length,
-                itemBuilder: (_, i) {
-                  var item = store.preview[i];
-                  var isMe = item.message.from == store.uid;
-
-                  return buildMessagePreview(isMe, item);
-                },
-              ),
-              floatingActionButton: SpeedDial(
-                onPress: () => store.openDial(),
-                openCloseDial: store.isDialOpen,
-                icon: Icons.add,
-                activeIcon: Icons.clear,
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
-                curve: Curves.bounceIn,
-                overlayColor: Colors.black,
-                overlayOpacity: 0.5,
-                renderOverlay: true,
-                buttonSize: 64,
-                elevation: 5,
-                children: [
-                  SpeedDialChild(
-                    child: Icon(
-                      Icons.exit_to_app_rounded,
+    return Observer(
+      builder: (_) {
+        return WillPopScope(
+          onWillPop: () async {
+            if (store.isDialOpen.value) {
+              store.openDial();
+              return false;
+            } else {
+              return true;
+            }
+          },
+          child: Scaffold(
+            body: CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  floating: true,
+                  backwardsCompatibility: false,
+                  systemOverlayStyle: SystemUiOverlayStyle.light,
+                  centerTitle: true,
+                  title: Text(
+                    'Flutter Chat App',
+                    style: TextStyle(
+                      fontSize: 18,
                       color: Colors.white,
                     ),
-                    label: 'Sair',
-                    labelStyle: TextStyle(fontSize: 16),
-                    onTap: () => store.signOut(),
-                    backgroundColor: Colors.red,
                   ),
-                  SpeedDialChild(
-                    child: Icon(
-                      Icons.person_add_alt_1_rounded,
-                      color: Colors.white,
-                    ),
-                    label: 'Adicionar amigo',
-                    labelStyle: TextStyle(fontSize: 16),
-                    onTap: () => store.addFriend(context),
-                    backgroundColor: Theme.of(context).primaryColor,
+                  actions: [
+                    controller.requestsCount > 0
+                        ? Stack(
+                            children: [
+                              Positioned.fill(
+                                top: 5,
+                                left: 5,
+                                child: Text(
+                                  '1',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () =>
+                                    Modular.to.pushNamed('/home/requests'),
+                                icon: Icon(Icons.notifications_rounded),
+                              ),
+                            ],
+                          )
+                        : SizedBox(),
+                  ],
+                ),
+                SliverList(
+                  delegate: SliverChildListDelegate(
+                    [
+                      ...controller.messagesPreview
+                          .map((e) => buildMessagePreview(
+                                e.message.from == controller.user.uid,
+                                e,
+                              ))
+                          .toList(),
+                    ],
                   ),
-                  SpeedDialChild(
-                    child: Icon(
-                      Icons.message_rounded,
-                      color: Colors.white,
-                    ),
-                    label: 'Nova conversa',
-                    labelStyle: TextStyle(fontSize: 16),
-                    onTap: () => Modular.to.pushNamed('/home/friends'),
-                    backgroundColor: Theme.of(context).primaryColor,
-                  ),
-                  SpeedDialChild(
-                    child: Icon(
-                      Icons.person_rounded,
-                      color: Colors.white,
-                    ),
-                    label: 'Perfil',
-                    labelStyle: TextStyle(fontSize: 16),
-                    onTap: () => Modular.to.pushNamed(
-                      '/home/profile',
-                      arguments: {
-                        'isMe': true,
-                        'user': store.user,
-                      },
-                    ),
-                    backgroundColor: Theme.of(context).primaryColor,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          );
-        },
-      ),
+            floatingActionButton: SpeedDial(
+              onPress: () => store.openDial(),
+              openCloseDial: store.isDialOpen,
+              icon: Icons.add,
+              activeIcon: Icons.clear,
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+              curve: Curves.bounceIn,
+              overlayColor: Colors.black,
+              overlayOpacity: 0.5,
+              renderOverlay: true,
+              buttonSize: 64,
+              elevation: 5,
+              children: [
+                SpeedDialChild(
+                  child: Icon(
+                    Icons.exit_to_app_rounded,
+                    color: Colors.white,
+                  ),
+                  label: 'Sair',
+                  labelStyle: TextStyle(fontSize: 16),
+                  onTap: () => store.signOut(),
+                  backgroundColor: Colors.red,
+                ),
+                SpeedDialChild(
+                  child: Icon(
+                    Icons.person_add_alt_1_rounded,
+                    color: Colors.white,
+                  ),
+                  label: 'Adicionar amigo',
+                  labelStyle: TextStyle(fontSize: 16),
+                  onTap: () => popUpToAddNewFriend(
+                    context: context,
+                    onPress: () {},
+                  ),
+                  backgroundColor: Theme.of(context).primaryColor,
+                ),
+                SpeedDialChild(
+                  child: Icon(
+                    Icons.message_rounded,
+                    color: Colors.white,
+                  ),
+                  label: 'Nova conversa',
+                  labelStyle: TextStyle(fontSize: 16),
+                  onTap: () => Modular.to.pushNamed('/home/friends'),
+                  backgroundColor: Theme.of(context).primaryColor,
+                ),
+                SpeedDialChild(
+                  child: Icon(
+                    Icons.person_rounded,
+                    color: Colors.white,
+                  ),
+                  label: 'Perfil',
+                  labelStyle: TextStyle(fontSize: 16),
+                  onTap: () => Modular.to.pushNamed(
+                    '/home/profile',
+                    arguments: {
+                      'isMe': true,
+                      'user': store.user,
+                    },
+                  ),
+                  backgroundColor: Theme.of(context).primaryColor,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

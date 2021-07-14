@@ -1,10 +1,11 @@
+import 'package:chat/app/shared/functions/get_empty_image_url.dart';
 import 'package:chat/app/shared/models/message_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:intl/intl.dart';
 
 Widget buildMessagePreview(bool isMe, MessagePreview item) {
-  var date = DateTime.fromMillisecondsSinceEpoch(item.message.time!);
+  var date = DateTime.fromMillisecondsSinceEpoch(item.message.time);
   var time = DateFormat.Hm('pt_BR').format(date);
 
   return Padding(
@@ -14,7 +15,7 @@ Widget buildMessagePreview(bool isMe, MessagePreview item) {
     ),
     child: Material(
       color: Colors.white,
-      elevation: 5,
+      elevation: 2,
       borderRadius: BorderRadius.circular(4),
       child: InkWell(
         onTap: () => Modular.to.pushNamed(
@@ -27,11 +28,20 @@ Widget buildMessagePreview(bool isMe, MessagePreview item) {
         highlightColor: Colors.black12,
         borderRadius: BorderRadius.circular(4),
         child: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 15,
+          ),
           child: Row(
             children: [
               CircleAvatar(
                 radius: 24,
+                backgroundColor: Colors.transparent,
+                backgroundImage: NetworkImage(
+                  item.sender.image!.isEmpty
+                      ? getEmptyImageUrl(item.sender.name!.replaceAll(' ', '+'))
+                      : item.sender.image!,
+                ),
               ),
               SizedBox(width: 10),
               Expanded(
@@ -39,18 +49,57 @@ Widget buildMessagePreview(bool isMe, MessagePreview item) {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isMe ? 'Você' : item.sender.name!,
+                      item.sender.name!,
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.black,
                       ),
                     ),
-                    Text(
-                      item.message.message!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            item.message.type == 'image'
+                                ? 'Imagem'
+                                : item.message.message,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ),
+                        isMe
+                            ? Padding(
+                                padding: EdgeInsets.only(left: 5),
+                                child: Icon(
+                                  Icons.done_all_rounded,
+                                  color: item.message.seen
+                                      ? Colors.greenAccent
+                                      : Colors.grey,
+                                  size: 16,
+                                ),
+                              )
+                            : item.message.seen
+                                ? SizedBox()
+                                : Padding(
+                                    padding: EdgeInsets.only(left: 5),
+                                    child: CircleAvatar(
+                                      radius: 8,
+                                      backgroundColor: Colors.green,
+                                      child: Text(
+                                        '${item.unread}',
+                                        style: TextStyle(
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                        SizedBox(width: 10),
+                      ],
                     ),
                   ],
                 ),
