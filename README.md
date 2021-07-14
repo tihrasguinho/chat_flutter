@@ -8,11 +8,11 @@ Um aplicativo de troca de mensagens simples (texto, imagem e áudio), tendo como
 * Enviar pedido de amizade para usuários cadastrados (utilizando email como id único).
 * Acessar a galeria para trocar sua imagem de perfil fazendo upload para o Firebase Storage.
 * Enviar mensagem para seus amigos previamente adicionados (Texto, Imagem e Áudio).
-* As mensagens enviadas podem ser, apagadas, editadas (no caso de textos) e futuramente respondidas (marcando-as).
+* As mensagens enviadas podem ser, apagadas, editadas (textos) e futuramente respondidas.
 * Quando as mensagens são abertas são marcadas como lidas para o usuário que as enviou.
-* Na tela inicial mostra s ultima mensagen enviada de cada amigo, no caso de não vistas, mostra um contador de novas mensagens.
+* Na tela inicial mostra a ultima mensagen recebida, com um contador para as novas mensagens.
 * Também na tela inicial, quando a mensagem enviada é vista, atualiza a cor do check para verde.
-* Os usuários que estão logados recebem notificações de pedidos de amizade, solicitação aceita e novas mensagens.
+* Os usuários recebem notificações de pedidos de amizade, solicitação aceita e novas mensagens.
 * Adicionado um ícone launcher e para as notificações! Créditos 
 * Opções de login com email e senha, futuramente com Google e Facebook.
 * Tela de login e de cadastro com uma imagem e uma simples animação de movimento.
