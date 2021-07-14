@@ -2,25 +2,27 @@
 
 Um aplicativo de troca de mensagens simples (texto, imagem e áudio), tendo como backend o Firebase!
 
-##### Detalhes do projeto
+<img src="https://i.imgur.com/oFO1w9D.jpg" width="35%" height="35%"> <img src="https://i.imgur.com/TSdJKgz.jpg" width="35%" height="35%">
 
-* É possível criar uma conta e logar-se com ela.
-* Enviar pedido de amizade para usuários cadastrados (utilizando email como id único).
-* Acessar a galeria para trocar sua imagem de perfil fazendo upload para o Firebase Storage.
-* Enviar mensagem para seus amigos previamente adicionados (Texto, Imagem e Áudio).
-* As mensagens enviadas podem ser, apagadas, editadas (textos) e futuramente respondidas.
-* Quando as mensagens são abertas são marcadas como lidas para o usuário que as enviou.
-* Na tela inicial mostra a ultima mensagen recebida, com um contador para as novas mensagens.
-* Também na tela inicial, quando a mensagem enviada é vista, atualiza a cor do check para verde.
-* Os usuários recebem notificações de pedidos de amizade, solicitação aceita e novas mensagens.
-* Adicionado um ícone launcher e para as notificações! Créditos 
-* Opções de login com email e senha, futuramente com Google e Facebook.
-* Tela de login e de cadastro com uma imagem e uma simples animação de movimento.
+##### Funcionalidades já existentes
+
+- É possível criar uma conta e logar-se com ela.
+- Enviar pedido de amizade para usuários cadastrados (utilizando email como id único).
+- Acessar a galeria para trocar sua imagem de perfil fazendo upload para o Firebase Storage.
+- Enviar mensagem para seus amigos previamente adicionados (Texto, Imagem e Áudio).
+- As mensagens enviadas podem ser, apagadas, editadas (textos) e futuramente respondidas.
+- Quando as mensagens são abertas são marcadas como lidas para o usuário que as enviou.
+- Na tela inicial mostra a ultima mensagen recebida, com um contador para as novas mensagens.
+- Também na tela inicial, quando a mensagem enviada é vista, atualiza a cor do check para verde.
+- Os usuários recebem notificações de pedidos de amizade, solicitação aceita e novas mensagens.
+- Adicionado um ícone launcher e para as notificações! Créditos 
+- Opções de login com email e senha, futuramente com Google e Facebook.
+- Tela de login e de cadastro com uma imagem e uma simples animação de movimento.
 
 ##### Próximas funcionalidades a serem implementadas
 
-* Envio de mensagem de áudio (com confirmação de escuta)!
-* Conversas em grupos.
+- [ ] Envio de mensagem de áudio (com confirmação de escuta)!
+- [ ] Conversas em grupos.
 
 ##### Serviços Firebase utilizados
 
