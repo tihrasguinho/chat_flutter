@@ -2,7 +2,7 @@
 
 Um aplicativo de troca de mensagens simples (texto, imagem e áudio), tendo como backend o Firebase!
 
-<img src="https://i.imgur.com/oFO1w9D.jpg" width="25%" height="25%"> <img src="https://i.imgur.com/TSdJKgz.jpg" width="25%" height="25%"> <img src="https://i.imgur.com/ogwpKF0.jpg" width="25%" height="25%"> 
+<img src="https://i.imgur.com/0zsCAU7.png" width="100%" height="100%"> 
 
 ##### Funcionalidades já existentes
 
@@ -15,7 +15,7 @@ Um aplicativo de troca de mensagens simples (texto, imagem e áudio), tendo como
 - Na tela inicial mostra a ultima mensagen recebida, com um contador para as novas mensagens.
 - Também na tela inicial, quando a mensagem enviada é vista, atualiza a cor do check para verde.
 - Os usuários recebem notificações de pedidos de amizade, solicitação aceita e novas mensagens.
-- Adicionado um ícone launcher e para as notificações! Créditos 
+- Adicionado um ícone launcher e para as notificações! 
 - Opções de login com email e senha, futuramente com Google e Facebook.
 - Tela de login e de cadastro com uma imagem e uma simples animação de movimento.
 
